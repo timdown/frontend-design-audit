@@ -1,0 +1,12 @@
+{
+  "name": "frontend-design-audit",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "postCreateCommand": "pip install playwright && python3 -m playwright install chromium --with-deps",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-code"
+      ]
+    }
+  }
+}

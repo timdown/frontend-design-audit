@@ -11,7 +11,9 @@ Audit and improve front-end interfaces using established usability principles.
 
 You perform a comprehensive design audit — thinking like a senior UX designer reviewing an interface end-to-end. You inspect existing code against 15 established design principles, identify problems at both the component level and the system level, rate their severity, and provide concrete fixes.
 
-This is not a surface-level lint or a quick accessibility check. You evaluate the full picture: individual component issues, cross-page consistency, design system coherence, interaction patterns, information architecture, and the holistic user journey. Every finding references a specific usability principle. Every severity rating follows a standardized 0-4 scale. Every recommendation must be actionable and specific to the code.
+The primary lens is **task completion and user experience**: can users find what they need, understand what to do, complete their goal, and recover when something goes wrong? Findings should be framed in terms of user behaviour and outcomes — confusion, abandoned flows, missed affordances, friction — not in terms of standards compliance or code attributes.
+
+This is not a surface-level accessibility audit. Accessibility issues are included when they block or impede real users, but the focus is the full usability picture: visual hierarchy, interaction design, information architecture, error recovery, cognitive load, mobile usability, and the holistic user journey. Every finding references a specific usability principle. Every severity rating follows a standardized 0-4 scale. Every recommendation must be actionable and specific to the code.
 
 ---
 
@@ -85,7 +87,7 @@ When the user points to files, directories, or is working inside a project. You 
 
 ### Live Website (URL)
 
-When the user provides a URL (e.g., "audit https://example.com"). You cannot modify the code — the audit is **report-only**. Use WebFetch to retrieve the page HTML/CSS. Note the limitations clearly in the report: you're evaluating the served HTML/CSS, not the source code, so some issues (JS behavior, loading states, dynamic content) may not be fully observable. Focus on what's visible in the markup: semantic structure, accessibility attributes, meta tags, contrast, responsive meta, and content structure.
+When the user provides a URL (e.g., "audit https://example.com"). You cannot modify the source code. For URL audits, run the bundled Playwright script (see Step 1) to capture rendered output, computed styles, post-JS ARIA state, interactive behavior, and automated accessibility data. The final report is written as a self-contained HTML file at `/tmp/design-audit-report.html` with embedded screenshots — not as a markdown conversation response. Falls back to WebFetch-only (with a limitation note in the report) if Playwright is unavailable or the URL requires authentication.
 
 ---
 
@@ -131,22 +133,28 @@ Use Glob to find UI files, then Read them. A thorough audit requires seeing the 
 
 **Multi-page projects:** Read ALL pages. Every page must be evaluated — not just the "main" one. Different pages often have different issues (a settings page may lack form validation that the homepage handles well; a 404 page may break the design system). If the project has more than 20 UI files, ask which flows to focus on, but still read shared layout components and at least sample pages from each distinct section.
 
-**For live websites (URL)** — Use WebFetch to retrieve the page. If the user provides a single URL, fetch that page. If they mention multiple pages or a whole site, fetch the key pages (homepage, main feature page, contact/form page — up to 5 pages).
+**For live websites (URL)** — Two-step discovery: WebFetch first for structural understanding, then Playwright for rendered data.
 
-From the fetched HTML, extract and evaluate:
-- Document structure (`<html lang>`, `<head>` meta/OG tags, `<title>`, viewport)
-- Semantic landmarks (`<main>`, `<nav>`, `<header>`, `<footer>`, heading hierarchy)
-- Accessibility attributes (alt text, ARIA labels, roles, form labels)
-- Link and button patterns (proper elements, external link handling)
-- Inline and linked stylesheets (contrast clues, responsive media queries, focus styles)
+**Step 1a — WebFetch:** Fetch the URL. Extract document structure, semantic landmarks, ARIA attributes, link/button patterns, and inline stylesheets for a quick structural read.
 
-Be transparent about what you **cannot** evaluate from fetched HTML alone:
-- JavaScript-dependent behavior (loading states, form validation, dynamic content)
-- Computed CSS (exact contrast ratios, hover/focus states)
-- Client-side routing and SPA navigation
-- Actual visual layout and rendering
+**Step 1b — Playwright capture:** Run the bundled capture script. The script is at `scripts/audit.py` in the plugin root — three directories above this SKILL.md file. Your context includes this skill's base directory; derive the path from it rather than hardcoding the cache path, which varies by installation and version.
 
-State these limitations in the report header so the user knows the scope.
+```bash
+# skill base dir is in context — plugin root is ../../.. from there
+python3 "<plugin-root>/scripts/audit.py" <URL>
+```
+
+If the script succeeds, read `/tmp/design-audit-data.json` and all `/tmp/design-audit-*.png` files (Read tool, image mode) before proceeding to Step 2. The script runs seven passes:
+
+1. **Baseline + axe-core** — Full-page desktop screenshot; automated WCAG violation scan via axe-core (violations include impact level, WCAG criterion, and affected selectors).
+2. **Interactive walkthrough** — Finds up to 12 interactive elements (checkboxes, tabs, collapse buttons, selects), clicks each in sequence, takes before/after screenshots and accessibility tree snapshots. The a11y diff reveals whether ARIA attributes update correctly after interaction.
+3. **Keyboard Tab traversal** — Tabs through up to 30 focusable elements, recording each element's tag, role, label, computed outline style, and bounding box. Screenshots capture visible focus rings.
+4. **Computed styles + touch targets** — Extracts computed `color`, `background-color`, `fontSize`, `fontWeight`, `lineHeight` for key element types. Flags all interactive elements below 44×44px with exact pixel dimensions.
+5. **Responsive breakpoint tour** — Screenshots at 375px (mobile), 768px (tablet), 1024px (tablet-land), 1280px (desktop), 1440px (desktop-xl).
+6. **Hover and focus state capture** — Hovers over and programmatically focuses each button/link, capturing screenshots to verify state visibility.
+7. **Color blindness simulations** — Renders the page under protanopia, deuteranopia, and achromatopsia to check if color alone carries meaning.
+
+**If Playwright fails** (package not installed, auth wall, timeout): note the limitation in the report and continue with WebFetch-only. Remaining limitations to state in the report: authenticated flows, hover-only states not triggered on load, multi-step flows requiring form input.
 
 ### Step 2: Evaluate
 
@@ -163,15 +171,15 @@ Then walk through **every single principle, one by one**. For each of the 15, as
 - Accessibility attributes (ARIA labels, roles, alt text, focus management)
 - Responsive behavior (viewport handling, touch targets, mobile patterns)
 
-**Hidden and dynamic UI** — these are easy to overlook but often contain the worst usability issues because they get less design attention. Actively search the code for every piece of UI that isn't visible on initial page load, and evaluate each one:
-- **Modals and dialogs** — Check for `role="dialog"`, `aria-modal`, `aria-labelledby`, Escape key handler, focus trap (Tab should cycle within the modal), and return-focus-on-close. Check that the overlay click-to-dismiss works. Check that forms inside modals provide submission feedback and that labels are properly associated.
-- **Dropdowns, menus, and popovers** — Check for `aria-haspopup`, `aria-expanded`, keyboard navigation (arrow keys, Escape to close), and click-outside-to-close.
-- **Drawers, sidebars, and off-canvas panels** — Same focus-trap and Escape requirements as modals. Check mobile responsive behavior.
-- **Tooltips and toasts** — Check timing, dismissibility, and screen reader announcements (`role="status"`, `aria-live`).
-- **Accordions, tabs, and collapsible sections** — Check for proper ARIA roles (`tablist`, `tab`, `tabpanel`) and keyboard patterns (arrow keys between tabs).
-- **Form validation states** — Check that error messages are associated with inputs (`aria-describedby`), that errors are announced to screen readers, and that focus moves to the first error.
-- **Empty states, loading states, and error states** — Check that these exist and communicate clearly. A missing empty state is a finding.
-- **Confirmation dialogs for destructive actions** — Check whether delete/remove/clear actions have confirmation steps.
+**Hidden and dynamic UI** — these are easy to overlook but often contain the worst usability issues because they get less design attention. Actively search the code for every piece of UI that isn't visible on initial page load, and evaluate each one primarily from a task-completion perspective:
+- **Modals and dialogs** — Can users accomplish the task inside without confusion? Is the dismissal mechanism (Escape, overlay click, close button) obvious? Do forms inside give clear submission feedback? Does cancelling lose user input? Is the relationship between the modal trigger and its content clear?
+- **Dropdowns, menus, and popovers** — Is the open/closed state visually unambiguous? Can users tell the menu is dismissible? Does click-outside-to-close work? Are options easy to scan?
+- **Drawers, sidebars, and off-canvas panels** — Is there a clear way to close it? Does it feel like a panel or like the page broke? Check mobile behavior specifically — these often become unusable on small screens.
+- **Tooltips and toasts** — Is the timing right (not too fast to read, not blocking the UI)? Can they be dismissed? Is the information surfaced in time to be useful, or does it appear after the user has already made a mistake?
+- **Accordions, tabs, and collapsible sections** — Is the expand/collapse state visually obvious? Is the chevron/indicator in the right position? Do tabs indicate which is active? Is the tab content clearly associated with the trigger?
+- **Form validation states** — Are errors placed where users will see them (next to the field, not just at the top)? Are error messages specific enough to act on ("Enter a valid email" rather than "Invalid input")? Is there inline validation or only on submit?
+- **Empty states, loading states, and error states** — Do these exist? An interface with no empty state shows a blank void. No loading indicator means users don't know if the action worked. A missing error state leaves users stranded. Each of these absent states is a finding.
+- **Confirmation dialogs for destructive actions** — Does deleting, clearing, or removing anything have a confirmation step? Is the confirmation copy specific ("Delete 'Project Alpha'?" not "Are you sure?")? Is the destructive action clearly distinguished from cancel?
 
 **Visual design** — many usability problems are not in the code attributes but in the visual presentation. These issues result in visible, meaningful changes when fixed. The visual design checks are integrated into `../../../references/heuristics.md` under each relevant principle (especially H8, H11, H12, H14). Key areas:
 - **Typography hierarchy** — Is there a clear size/weight progression that guides the eye? Can users scan headings, then drill into details? Are body text and labels large enough? A flat type scale (everything similar size) forces users to read everything instead of scanning.
@@ -213,7 +221,46 @@ Before proceeding to the report, verify you evaluated ALL 15 principles. Walk th
 
 If any principle has zero findings AND zero strengths noted, go back and evaluate it — you likely skimmed past it. Every principle must be consciously assessed, even if the result is "well-handled."
 
+**When Playwright data is available (URL audits), augment each heuristic with:**
+
+- **H1 / H11 Dynamic state (primary):** For each item in `interactions`, compare the before/after screenshots visually first — does the UI clearly communicate what changed? Then check the ARIA diff as a secondary signal. A toggle that updates prices but shows no label change is a usability problem regardless of what the ARIA tree says. A button that expands a section but the chevron doesn't rotate is a finding. Focus on *what the user sees*, not what the accessibility tree reports.
+- **H11 Affordances:** Reference hover/focus screenshots to confirm interactive states are visually distinct. An element with no hover state looks static. An element with no visible focus ring is invisible to keyboard users. Flag `outline: none` in `focus_order` — this removes a browser default that was doing real work.
+- **H11 Touch targets:** Report exact pixel dimensions for every element in `touch_targets` (below 44×44px). These aren't theoretical — a 34×20px toggle on a pricing page is a conversion barrier on mobile.
+- **H12 Structure:** Use breakpoint screenshots as the primary evidence for layout findings. Reference them by label (e.g. "tablet-land screenshot") when calling out truncation, overflow, stacking order problems, or disappearing content at a specific width.
+- **H14 Color:** Reference color blindness screenshots. If a color-coded element (status badge, pricing card highlight, icon) looks identical or ambiguous under `deuteranopia`, that is a severity-3 finding — color is carrying meaning that isn't supported by shape, label, or position.
+- **H13 Contrast:** Compute contrast ratios from `computed_styles`. Flag below 4.5:1 for normal text, 3:1 for large text (≥18px or bold ≥14px). Report the ratio. Note that the script falls back to body background when an element's own background is transparent — verify nav/card text ratios manually if the script reports implausible values like 1:1 on clearly readable text.
+- **H13 Accessibility (secondary):** Include axe violations as findings only when they represent a real barrier for users, not just a standards gap. Map axe impact to severity: `critical` → 3–4, `serious` → 2–3, `moderate` → 2, `minor` → 1. Missing ARIA attributes that Bootstrap or JS would add at runtime are lower priority than missing labels, broken flows, or invisible states. Do not enumerate ARIA attributes as findings unless they represent a confirmed user-visible problem.
+
 ### Step 3: Report
+
+**For local source audits:** Present findings as markdown in the conversation using the structure below.
+
+**For URL audits:** Write the report to `./design-audit-report.html` (current working directory) using the Write tool — do **not** paste the full report into the conversation. Writing to cwd makes it immediately visible in VS Code's file explorer (including Codespaces) and persists across container restarts, unlike `/tmp`. Tell the user the full path when done. The HTML report structure:
+
+```
+<head>
+  Inline CSS only — no external dependencies.
+  System font stack, max-width 900px centered.
+  Severity color vars: --sev-4: #dc2626, --sev-3: #ea580c, --sev-2: #ca8a04, --sev-1: #6b7280.
+  Print styles: @media print expands all sections, removes nav chrome.
+
+<body>
+  <header>: page title, URL audited, date, severity summary table, quick wins list.
+  <section id="findings">: heuristic findings, severity descending. Lead with task-flow and interaction findings; accessibility/contrast findings come last within each severity band.
+    Each finding: severity badge (color-coded) · principle · issue · user impact · fix.
+    Interaction findings: before/after <img> side by side in a two-column CSS grid.
+    Layout findings: relevant breakpoint screenshot inline.
+    Color findings: color blindness simulation screenshot inline.
+  <section id="contrast">: table of element types, computed contrast ratio, PASS/FAIL badge.
+  <section id="touch-targets">: table of elements below 44×44px with exact dimensions.
+  <section id="gallery">: all breakpoint screenshots, all color blindness simulations.
+  <section id="strengths">: bulleted list.
+  <footer>: "Generated by Claude · frontend-design-audit · {date}"
+```
+
+Embed screenshots as `<img src="data:image/png;base64,..." alt="...">` — read each `.png` file and base64-encode it inline. No JavaScript. After writing, tell the user: "Report saved to `./design-audit-report.html` — open in a browser or right-click → Download in VS Code. File → Print → Save as PDF for a PDF version."
+
+**Markdown report structure (local audits and URL fallback):**
 
 Present findings using this structure:
 

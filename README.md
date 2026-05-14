@@ -1,5 +1,7 @@
 # Frontend Design Audit
 
+> Fork of [mistyhx/frontend-design-audit](https://github.com/mistyhx/frontend-design-audit). Adds a Playwright-based URL audit mode with screenshot capture, interaction testing, and an HTML report with embedded images.
+
 A Claude Code skill that audits and improves the usability of existing front-end interfaces. It evaluates your UI code against 15 established design principles, identifies problems, rates severity, and helps fix what it finds.
 
 ## What It Does
@@ -47,7 +49,7 @@ claude
 2. Add the marketplace:
 
 ```
-/plugin marketplace add mistyhx/frontend-design-audit
+/plugin marketplace add timdown/frontend-design-audit
 ```
 
 3. Open the plugin menu:
@@ -60,12 +62,23 @@ claude
 
 5. Restart Claude Code.
 
+### GitHub Codespaces
+
+This repo includes a `.devcontainer/devcontainer.json` that installs Playwright and Chromium automatically when a Codespace opens. Open the repo in Codespaces, then in the terminal:
+
+```bash
+claude                          # authenticate on first run
+/plugin install .               # install from the local repo
+```
+
+URL audits work out of the box — no extra setup needed.
+
 ### Alternative: Load Directly (per-session)
 
 Clone this repo, then start Claude Code from your project with a relative path to the plugin:
 
 ```bash
-git clone https://github.com/mistyhx/frontend-design-audit.git ~/plugins/frontend-design-audit
+git clone https://github.com/timdown/frontend-design-audit.git ~/plugins/frontend-design-audit
 cd your-project
 claude --plugin-dir ../plugins/frontend-design-audit
 ```
@@ -120,6 +133,14 @@ Pass a URL to audit a live site (report only — no code changes):
 ```
 /frontend-design-audit https://example.com
 ```
+
+This mode uses Playwright to render the page and capture screenshots, computed styles, interactive behaviour, and focus order — rather than just fetching the HTML. Playwright must be installed separately:
+
+```bash
+pip install playwright && python3 -m playwright install chromium --with-deps
+```
+
+The report is written to `./design-audit-report.html` (current working directory) as a self-contained file with screenshots embedded. Open it in a browser, or right-click → Download in VS Code. Falls back to HTML-fetch-only if Playwright is unavailable.
 
 ## Example
 

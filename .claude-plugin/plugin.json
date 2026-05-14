@@ -6,7 +6,13 @@
     "name": "mistyhx",
     "url": "https://github.com/mistyhx"
   },
-  "repository": "https://github.com/mistyhx/frontend-design-audit",
+  "contributors": [
+    {
+      "name": "timdown",
+      "url": "https://github.com/timdown"
+    }
+  ],
+  "repository": "https://github.com/timdown/frontend-design-audit",
   "license": "MIT",
   "commands": "./.claude/commands",
   "skills": "./.claude/skills",
