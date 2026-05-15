@@ -87,7 +87,7 @@ When the user points to files, directories, or is working inside a project. You 
 
 ### Live Website (URL)
 
-When the user provides a URL (e.g., "audit https://example.com"). You cannot modify the source code. For URL audits, run the bundled Playwright script (see Step 1) to capture rendered output, computed styles, post-JS ARIA state, interactive behavior, and automated accessibility data. The final report is written as a self-contained HTML file at `/tmp/design-audit-report.html` with embedded screenshots — not as a markdown conversation response. Falls back to WebFetch-only (with a limitation note in the report) if Playwright is unavailable or the URL requires authentication.
+When the user provides a URL (e.g., "audit https://example.com"). You cannot modify the source code. For URL audits, run the bundled Playwright script (see Step 1) to capture rendered output, computed styles, post-JS ARIA state, interactive behavior, and automated accessibility data. The final report is written as a self-contained HTML file at `./design-audit-report.html` (current working directory) with embedded screenshots — not as a markdown conversation response. Falls back to WebFetch-only (with a limitation note in the report) if Playwright is unavailable or the URL requires authentication.
 
 ---
 
@@ -144,7 +144,7 @@ Use Glob to find UI files, then Read them. A thorough audit requires seeing the 
 python3 "<plugin-root>/scripts/audit.py" <URL>
 ```
 
-If the script succeeds, read `/tmp/design-audit-data.json` and all `/tmp/design-audit-*.png` files (Read tool, image mode) before proceeding to Step 2. The script runs seven passes:
+If the script succeeds, read `.design-audit/design-audit-data.json` and all `.design-audit/design-audit-*.png` files (Read tool, image mode) before proceeding to Step 2. The script runs seven passes:
 
 1. **Baseline + axe-core** — Full-page desktop screenshot; automated WCAG violation scan via axe-core (violations include impact level, WCAG criterion, and affected selectors).
 2. **Interactive walkthrough** — Finds up to 12 interactive elements (checkboxes, tabs, collapse buttons, selects), clicks each in sequence, takes before/after screenshots and accessibility tree snapshots. The a11y diff reveals whether ARIA attributes update correctly after interaction.

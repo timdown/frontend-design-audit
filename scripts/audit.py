@@ -2,13 +2,15 @@
 """
 frontend-design-audit Playwright capture script.
 Usage: python3 audit.py <url>
-Outputs: /tmp/design-audit-data.json, /tmp/design-audit-*.png
+Outputs: .design-audit/design-audit-data.json, .design-audit/design-audit-*.png
 """
-import asyncio, json, sys
+import asyncio, json, os, sys
 from playwright.async_api import async_playwright
 
 URL = sys.argv[1]
-OUT = "/tmp/design-audit"
+OUT_DIR = os.path.join(os.getcwd(), ".design-audit")
+os.makedirs(OUT_DIR, exist_ok=True)
+OUT = os.path.join(OUT_DIR, "design-audit")
 
 AXE_CDN = "https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.9.1/axe.min.js"
 BREAKPOINTS = [
@@ -66,7 +68,7 @@ async def a11y(page):
 async def run():
     results = {}
     async with async_playwright() as p:
-        browser = await p.chromium.launch()
+        browser = await p.chromium.launch(args=["--no-sandbox"])
 
         # ── Pass 1: Baseline + axe-core ──────────────────────────────
         page = await browser.new_page(viewport={"width": 1280, "height": 800})

@@ -62,17 +62,6 @@ claude
 
 5. Restart Claude Code.
 
-### GitHub Codespaces
-
-This repo includes a `.devcontainer/devcontainer.json` that installs Playwright and Chromium automatically when a Codespace opens. Open the repo in Codespaces, then in the terminal:
-
-```bash
-claude                          # authenticate on first run
-/plugin install .               # install from the local repo
-```
-
-URL audits work out of the box — no extra setup needed.
-
 ### Alternative: Load Directly (per-session)
 
 Clone this repo, then start Claude Code from your project with a relative path to the plugin:
@@ -134,11 +123,26 @@ Pass a URL to audit a live site (report only — no code changes):
 /frontend-design-audit https://example.com
 ```
 
-This mode uses Playwright to render the page and capture screenshots, computed styles, interactive behaviour, and focus order — rather than just fetching the HTML. Playwright must be installed separately:
+This mode uses Playwright to render the page and capture screenshots, computed styles, interactive behaviour, and focus order — rather than just fetching the HTML.
 
-```bash
-pip install playwright && python3 -m playwright install chromium --with-deps
-```
+**Prerequisites — install once:**
+
+1. **Python 3.8+** — check with `python3 --version`. Install via your package manager if needed:
+
+   ```bash
+   # macOS
+   brew install python3
+
+   # Ubuntu/Debian
+   sudo apt install python3 python3-pip
+   ```
+
+2. **Playwright Python package and Chromium:**
+
+   ```bash
+   pip install playwright
+   python3 -m playwright install chromium --with-deps
+   ```
 
 The report is written to `./design-audit-report.html` (current working directory) as a self-contained file with screenshots embedded. Open it in a browser, or right-click → Download in VS Code. Falls back to HTML-fetch-only if Playwright is unavailable.
 
